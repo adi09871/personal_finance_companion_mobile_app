@@ -1,6 +1,10 @@
-package com.example.personalfinancecompanionmobileapp.presentation.dashboard
+package com.example.personalfinancecompanionmobileapp.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -18,7 +23,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.personalfinancecompanionmobileapp.FinanceApplication
-import com.example.personalfinancecompanionmobileapp.presentation.Screen
+import com.example.personalfinancecompanionmobileapp.data.TransactionEntity
+import com.example.personalfinancecompanionmobileapp.presentation.dashboard.DashboardViewModel
+// Dhyan dein: Agar Screen import error de, toh Alt+Enter dabayein
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.take
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,13 +40,15 @@ fun DashboardScreen(navController: NavController) {
     val balance by viewModel.totalBalance.collectAsState()
     val income by viewModel.totalIncome.collectAsState()
     val expense by viewModel.totalExpense.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("My Finance", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },
@@ -44,7 +56,7 @@ fun DashboardScreen(navController: NavController) {
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.AddTransaction.route) },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = Color.White
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
             }
@@ -60,10 +72,34 @@ fun DashboardScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Recent Transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Recent Transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No transactions yet. Tap + to add!", color = Color.Gray)
+                TextButton(onClick = { navController.navigate(Screen.History.route) }) {
+                    Text("View All")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (transactions.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No transactions yet. Tap + to add!", color = Color.Gray)
+                }
+            } else {
+                // FIXED: Clean single LazyColumn
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(transactions.take(5)) { transaction ->
+                        TransactionItem(transaction = transaction)
+                    }
+                }
             }
         }
     }
@@ -95,6 +131,60 @@ fun BalanceCard(balance: Double, income: Double, expense: Double) {
                     Text("₹${"%.2f".format(expense)}", color = Color.Red.copy(alpha = 0.9f), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TransactionItem(transaction: TransactionEntity) {
+    val isIncome = transaction.type == "INCOME"
+    val amountColor = if (isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
+    val sign = if (isIncome) "+" else "-"
+
+    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateString = sdf.format(Date(transaction.dateMillis))
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(amountColor.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = transaction.title.take(1).uppercase(),
+                        color = amountColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(text = transaction.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = dateString, color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+
+            Text(
+                text = "$sign₹${transaction.amount}",
+                fontWeight = FontWeight.Bold,
+                color = amountColor,
+                fontSize = 16.sp
+            )
         }
     }
 }

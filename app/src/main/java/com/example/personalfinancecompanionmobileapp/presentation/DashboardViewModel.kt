@@ -3,6 +3,8 @@ package com.example.personalfinancecompanionmobileapp.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.personalfinancecompanionmobileapp.data.TransactionDao
+import com.example.personalfinancecompanionmobileapp.data.TransactionEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
